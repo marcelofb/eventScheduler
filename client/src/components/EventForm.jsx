@@ -13,7 +13,7 @@ export default function EventForm({ onEventCreated }) {
     setError('');
     setLoading(true);
     try {
-      const event = await createEvent({ title, description, scheduled_at: scheduledAt });
+      const event = await createEvent({ title, description, scheduled_at: new Date(scheduledAt).toISOString() });
       onEventCreated(event);
       setTitle('');
       setDescription('');

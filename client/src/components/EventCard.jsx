@@ -11,7 +11,7 @@ function formatDate(isoString) {
   });
 }
 
-export default function EventCard({ event, onDeleted }) {
+export default function EventCard({ event, onDeleted, isPast }) {
   async function handleDelete() {
     try {
       await deleteEvent(event.id);
@@ -29,9 +29,11 @@ export default function EventCard({ event, onDeleted }) {
       </div>
       <h3 className="event-title">{event.title}</h3>
       {event.description && <p className="event-description">{event.description}</p>}
-      <button className="btn-delete" onClick={handleDelete} aria-label="Eliminar evento">
-        Eliminar
-      </button>
+      {!isPast && (
+        <button className="btn-delete" onClick={handleDelete} aria-label="Eliminar evento">
+          Eliminar
+        </button>
+      )}
     </div>
   );
 }

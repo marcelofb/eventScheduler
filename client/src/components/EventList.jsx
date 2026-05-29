@@ -23,7 +23,7 @@ export default function EventList({ events, loading, onDeleted }) {
         <section>
           <h3 className="list-section-title">Próximos</h3>
           {upcoming.map((e) => (
-            <EventCard key={e.id} event={e} onDeleted={onDeleted} />
+            <EventCard key={e.id} event={e} onDeleted={onDeleted} isPast={false} />
           ))}
         </section>
       )}
@@ -31,7 +31,7 @@ export default function EventList({ events, loading, onDeleted }) {
         <section>
           <h3 className="list-section-title past">Anteriores</h3>
           {past.map((e) => (
-            <EventCard key={e.id} event={e} onDeleted={onDeleted} />
+            <EventCard key={e.id} event={e} onDeleted={onDeleted} isPast={true} />
           ))}
         </section>
       )}

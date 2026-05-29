@@ -11,7 +11,7 @@ function formatDate(isoString) {
   });
 }
 
-export default function EventCard({ event, onDeleted, isPast }) {
+export default function EventCard({ event, onDeleted, onEdit, isPast }) {
   async function handleDelete() {
     try {
       await deleteEvent(event.id);
@@ -28,11 +28,17 @@ export default function EventCard({ event, onDeleted, isPast }) {
         {event.telegram_sent && <span className="badge-sent">✓ Enviado</span>}
       </div>
       <h3 className="event-title">{event.title}</h3>
+      {event.person && <p className="event-person">👤 {event.person}</p>}
       {event.description && <p className="event-description">{event.description}</p>}
-      {!isPast && (
-        <button className="btn-delete" onClick={handleDelete} aria-label="Eliminar evento">
-          Eliminar
-        </button>
+      {!isPast && !event.telegram_sent && (
+        <div className="card-actions">
+          <button className="btn-edit" onClick={() => onEdit(event)} aria-label="Editar evento">
+            Editar
+          </button>
+          <button className="btn-delete" onClick={handleDelete} aria-label="Eliminar evento">
+            Eliminar
+          </button>
+        </div>
       )}
     </div>
   );

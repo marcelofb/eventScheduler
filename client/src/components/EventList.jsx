@@ -1,6 +1,6 @@
 import EventCard from './EventCard';
 
-export default function EventList({ events, loading, onDeleted }) {
+export default function EventList({ events, loading, onDeleted, onEdit }) {
   if (loading) return null; // App muestra el loader global
 
   if (events.length === 0) {
@@ -23,7 +23,7 @@ export default function EventList({ events, loading, onDeleted }) {
         <section>
           <h3 className="list-section-title">Próximos</h3>
           {upcoming.map((e) => (
-            <EventCard key={e.id} event={e} onDeleted={onDeleted} isPast={false} />
+            <EventCard key={e.id} event={e} onDeleted={onDeleted} onEdit={onEdit} isPast={false} />
           ))}
         </section>
       )}
@@ -31,7 +31,7 @@ export default function EventList({ events, loading, onDeleted }) {
         <section>
           <h3 className="list-section-title past">Anteriores</h3>
           {past.map((e) => (
-            <EventCard key={e.id} event={e} onDeleted={onDeleted} isPast={true} />
+            <EventCard key={e.id} event={e} onDeleted={onDeleted} onEdit={null} isPast={true} />
           ))}
         </section>
       )}

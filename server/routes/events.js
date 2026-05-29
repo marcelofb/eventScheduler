@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/events — crear evento
 router.post('/', async (req, res) => {
-  const { title, description, scheduled_at } = req.body;
+  const { title, description, scheduled_at, person } = req.body;
 
   if (!title || !scheduled_at) {
     return res.status(400).json({ error: 'title y scheduled_at son requeridos' });
@@ -26,13 +26,40 @@ router.post('/', async (req, res) => {
 
   try {
     const result = await pool.query(
-      'INSERT INTO events (title, description, scheduled_at) VALUES ($1, $2, $3) RETURNING *',
-      [title, description || null, scheduled_at]
+      'INSERT INTO events (title, description, scheduled_at, person) VALUES ($1, $2, $3, $4) RETURNING *',
+      [title, description || null, scheduled_at, person || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al crear evento' });
+  }
+});
+
+// PUT /api/events/:id — editar evento
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, description, scheduled_at, person } = req.body;
+
+  if (!Number.isInteger(Number(id))) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+  if (!title || !scheduled_at) {
+    return res.status(400).json({ error: 'title y scheduled_at son requeridos' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE events SET title=$1, description=$2, scheduled_at=$3, person=$4 WHERE id=$5 AND telegram_sent=false RETURNING *',
+      [title, description || null, scheduled_at, person || null, id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Evento no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al editar evento' });
   }
 });
 

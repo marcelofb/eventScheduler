@@ -16,6 +16,10 @@ async function initDB() {
       created_at  TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  // Migración: agregar columna person si no existe
+  await pool.query(`
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS person TEXT
+  `);
   console.log('DB lista');
 }
 

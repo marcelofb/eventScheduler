@@ -16,6 +16,16 @@ export async function createEvent(data) {
   return res.json();
 }
 
+export async function updateEvent(id, data) {
+  const res = await fetch(`${API_URL}/api/events/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Error al editar evento');
+  return res.json();
+}
+
 export async function deleteEvent(id) {
   const res = await fetch(`${API_URL}/api/events/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error al eliminar evento');

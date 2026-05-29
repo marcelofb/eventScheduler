@@ -9,6 +9,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [slowWarning, setSlowWarning] = useState(false);
   const [error, setError] = useState('');
+  const [editingEvent, setEditingEvent] = useState(null);
 
   useEffect(() => {
     const slowTimer = setTimeout(() => setSlowWarning(true), 4000);
@@ -35,6 +36,15 @@ export default function App() {
         (a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)
       )
     );
+  }
+
+  function handleEventUpdated(updated) {
+    setEvents((prev) =>
+      prev
+        .map((e) => (e.id === updated.id ? updated : e))
+        .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
+    );
+    setEditingEvent(null);
   }
 
   function handleEventDeleted(id) {
@@ -71,11 +81,17 @@ export default function App() {
           </div>
         ) : (
           <>
-            <EventForm onEventCreated={handleEventCreated} />
+            <EventForm
+              onEventCreated={handleEventCreated}
+              onEventUpdated={handleEventUpdated}
+              editingEvent={editingEvent}
+              onCancelEdit={() => setEditingEvent(null)}
+            />
             <EventList
               events={events}
               loading={loading}
               onDeleted={handleEventDeleted}
+              onEdit={setEditingEvent}
             />
           </>
         )}

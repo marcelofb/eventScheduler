@@ -7,6 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       includeAssets: ['icons/*.png'],
       manifest: {
         name: 'Event Scheduler',

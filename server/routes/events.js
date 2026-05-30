@@ -20,8 +20,8 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { title, description, scheduled_at, person } = req.body;
 
-  if (!title || !scheduled_at) {
-    return res.status(400).json({ error: 'title y scheduled_at son requeridos' });
+  if (!title || !scheduled_at || !person) {
+    return res.status(400).json({ error: 'title, scheduled_at y person son requeridos' });
   }
 
   try {
@@ -44,8 +44,8 @@ router.put('/:id', async (req, res) => {
   if (!Number.isInteger(Number(id))) {
     return res.status(400).json({ error: 'ID inválido' });
   }
-  if (!title || !scheduled_at) {
-    return res.status(400).json({ error: 'title y scheduled_at son requeridos' });
+  if (!title || !scheduled_at || !person) {
+    return res.status(400).json({ error: 'title, scheduled_at y person son requeridos' });
   }
 
   try {

@@ -44,7 +44,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
       title,
       description,
       scheduled_at: new Date(scheduledAt).toISOString(),
-      person: person || null,
+      person,
     };
     try {
       if (isEditing) {
@@ -110,13 +110,14 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
       </div>
 
       <div className="field">
-        <label htmlFor="person">Para</label>
+        <label htmlFor="person">Para *</label>
         <select
           id="person"
           value={person}
           onChange={(e) => setPerson(e.target.value)}
+          required
         >
-          <option value="">— Sin asignar —</option>
+          <option value="">— Seleccioná —</option>
           {PERSONS.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}

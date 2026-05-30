@@ -344,3 +344,60 @@ body {
 .empty-hint {
   font-size: 0.85rem;
 }
+
+/* ── Filter chips ── */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filter-chip {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--gray-300);
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.filter-chip:active {
+  background: var(--indigo-light);
+}
+
+.filter-chip.active {
+  background: var(--indigo);
+  color: #fff;
+  border-color: var(--indigo);
+}
+
+.filter-empty {
+  font-size: 0.88rem;
+  color: var(--gray-400);
+  padding: 12px 0;
+}
+
+/* ── Toggle anteriores ── */
+.btn-toggle-past {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: var(--gray-400);
+  border: 1.5px dashed var(--gray-300);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-toggle-past:active {
+  color: var(--indigo);
+  border-color: var(--indigo);
+}

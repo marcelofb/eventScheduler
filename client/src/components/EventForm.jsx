@@ -39,6 +39,12 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    if (new Date(scheduledAt) <= new Date()) {
+      setError('La fecha y hora deben ser posteriores al momento actual.');
+      return;
+    }
+
     setLoading(true);
     const payload = {
       title,
@@ -105,6 +111,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
           type="datetime-local"
           value={scheduledAt}
           onChange={(e) => setScheduledAt(e.target.value)}
+          min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
           required
         />
       </div>

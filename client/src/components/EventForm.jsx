@@ -111,7 +111,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
           type="datetime-local"
           value={scheduledAt}
           onChange={(e) => setScheduledAt(e.target.value)}
-          min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+          min={toDatetimeLocal(new Date(Date.now() + 60000).toISOString())}
           required
         />
       </div>

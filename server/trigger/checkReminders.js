@@ -13,10 +13,11 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Buscar eventos de hoy que aún no se notificaron
+    // Buscar eventos de hoy que aún no se notificaron (timezone Argentina)
     const result = await pool.query(`
       SELECT * FROM events
-      WHERE scheduled_at::date = CURRENT_DATE
+      WHERE (scheduled_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
+          = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
         AND telegram_sent = false
       ORDER BY scheduled_at ASC
     `);

@@ -90,10 +90,15 @@ El frontend corre en `http://localhost:5173` y proxea `/api` al backend en el pu
 - Variable de entorno: `VITE_API_URL=https://tu-backend.onrender.com`
 
 ### Cron → cron-job.org
-- URL: `https://tu-backend.onrender.com/api/check-reminders`
-- Método: `POST`
-- Header: `x-cron-secret: <tu CRON_SECRET>`
-- Horario: 03:00 UTC (= 00:00 Argentina)
+
+Configurar **dos jobs** para compensar el cold start de Render free tier:
+
+| Job | URL | Método | Horario (UTC) | = Argentina | Header |
+|-----|-----|--------|---------------|-------------|--------|
+| Wake up | `.../api/health` | `GET` | `55 2 * * *` (02:55) | 23:55 | — |
+| Reminders | `.../api/check-reminders` | `POST` | `0 3 * * *` (03:00) | 00:00 | `x-cron-secret: <CRON_SECRET>` |
+
+El primer job despierta el servidor 5 minutos antes para que el segundo lo encuentre activo.
 
 ## Notas
 

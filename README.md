@@ -89,16 +89,22 @@ El frontend corre en `http://localhost:5173` y proxea `/api` al backend en el pu
 - Publish directory: `dist`
 - Variable de entorno: `VITE_API_URL=https://tu-backend.onrender.com`
 
-### Cron → cron-job.org
+### Cron → GitHub Actions
 
-Configurar **dos jobs** para compensar el cold start de Render free tier:
+El workflow `.github/workflows/midnight-reminders.yml` se ejecuta a las 02:55 UTC (23:55 Argentina):
 
-| Job | URL | Método | Horario (UTC) | = Argentina | Header |
-|-----|-----|--------|---------------|-------------|--------|
-| Wake up | `.../api/health` | `GET` | `55 2 * * *` (02:55) | 23:55 | — |
-| Reminders | `.../api/check-reminders` | `POST` | `0 3 * * *` (03:00) | 00:00 | `x-cron-secret: <CRON_SECRET>` |
+1. Pingea `/api/health` para despertar Render
+2. Espera 5 minutos (`sleep 300`)
+3. Llama a `POST /api/check-reminders` con el secret
 
-El primer job despierta el servidor 5 minutos antes para que el segundo lo encuentre activo.
+Agregar estos secrets en el repositorio (Settings → Secrets and variables → Actions):
+
+| Secret | Valor |
+|--------|-------|
+| `RENDER_APP_URL` | URL base de la app en Render (sin barra final) |
+| `CRON_SECRET` | El mismo valor que la variable de entorno `CRON_SECRET` en Render |
+
+Para probar sin esperar a medianoche: Actions → Midnight Reminders → Run workflow.
 
 ## Notas
 

@@ -2,17 +2,20 @@ name: Midnight Reminders
 
 on:
   schedule:
-    - cron: '55 2 * * *'  # 02:55 UTC = 23:55 Argentina
+    - cron: '0 3 * * *'   # 03:00 UTC = 00:00 Argentina
   workflow_dispatch:       # permite lanzarlo manualmente para probar
 
 jobs:
   send-reminders:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Wake up Render
         run: |
-          curl --silent --max-time 60 "${{ secrets.RENDER_APP_URL }}/api/health"
+          echo "Despertando servidor..."
+          curl --silent --max-time 60 --retry 3 --retry-delay 10 \
+            "${{ secrets.RENDER_APP_URL }}/api/health" || true
           echo "Servidor despertado"
 
       - name: Wait 5 minutes
@@ -20,7 +23,7 @@ jobs:
 
       - name: Send reminders
         run: |
-          curl --silent --max-time 60 --fail \
+          curl --fail --max-time 60 --retry 2 --retry-delay 10 \
             -X POST \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.RENDER_APP_URL }}/api/check-reminders"

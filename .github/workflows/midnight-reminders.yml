@@ -2,7 +2,7 @@ name: Midnight Reminders
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 03:00 UTC = 00:00 Argentina
+    - cron: '7 3 * * *'   # 03:07 UTC = 00:07 Argentina
   workflow_dispatch:       # permite lanzarlo manualmente para probar
 
 jobs:

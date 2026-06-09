@@ -36,7 +36,8 @@ router.post('/', async (req, res) => {
         timeZone: 'America/Argentina/Buenos_Aires',
       });
       const desc = e.description ? `\n   ${e.description}` : '';
-      return `• <b>${time}</b> — ${e.title}${desc}`;
+      const person = e.person ? ` (${e.person})` : '';
+      return `• <b>${time}</b> — ${e.title}${person}${desc}`;
     });
 
     const message = `📅 <b>Recordatorios de hoy</b>\n\n${lines.join('\n\n')}`;

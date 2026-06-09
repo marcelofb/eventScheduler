@@ -21,7 +21,7 @@ export default function EventList({ events, loading, onDeleted, onEdit }) {
 
   const now = new Date();
   const upcoming = events.filter((e) => new Date(e.scheduled_at) >= now);
-  const past = events.filter((e) => new Date(e.scheduled_at) < now);
+  const past = events.filter((e) => new Date(e.scheduled_at) < now).reverse();
 
   const filteredUpcoming =
     personFilter === 'Todos'

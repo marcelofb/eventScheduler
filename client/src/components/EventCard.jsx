@@ -13,6 +13,7 @@ function formatDate(isoString) {
 
 export default function EventCard({ event, onDeleted, onEdit, isPast }) {
   async function handleDelete() {
+    if (!window.confirm(`¿Eliminar "${event.title}"?`)) return;
     try {
       await deleteEvent(event.id);
       onDeleted(event.id);

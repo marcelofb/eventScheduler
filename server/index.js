@@ -4,6 +4,7 @@ const cors = require('cors');
 const { initDB } = require('./db/database');
 const eventsRouter = require('./routes/events');
 const checkRemindersRouter = require('./trigger/checkReminders');
+const weeklyReportRouter = require('./trigger/weeklyReport');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +19,7 @@ app.use(express.json());
 // Rutas
 app.use('/api/events', eventsRouter);
 app.use('/api/check-reminders', checkRemindersRouter);
+app.use('/api/weekly-report', weeklyReportRouter);
 
 // Health check para UptimeRobot o verificaciones básicas
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

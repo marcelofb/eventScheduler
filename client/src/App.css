@@ -150,6 +150,14 @@ body {
   border-radius: 8px;
 }
 
+.form-success {
+  font-size: 0.85rem;
+  color: #16a34a;
+  background: #f0fdf4;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
 /* ── Botones ── */
 .btn-primary {
   width: 100%;

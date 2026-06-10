@@ -1,0 +1,29 @@
+name: Weekly Report
+
+on:
+  schedule:
+    - cron: '15 19 * * 0'  # 19:15 UTC = 16:15 Argentina, domingos
+  workflow_dispatch:        # permite lanzarlo manualmente para probar
+
+jobs:
+  send-weekly-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Wake up Render
+        run: |
+          echo "Despertando servidor..."
+          curl --silent --max-time 60 --retry 3 --retry-delay 10 \
+            "${{ secrets.RENDER_APP_URL }}/api/health" || true
+          echo "Servidor despertado"
+
+      - name: Wait 5 minutes
+        run: sleep 300
+
+      - name: Send weekly report
+        run: |
+          curl --fail --max-time 60 --retry 2 --retry-delay 10 \
+            -X POST \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.RENDER_APP_URL }}/api/weekly-report"

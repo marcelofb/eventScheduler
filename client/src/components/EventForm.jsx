@@ -16,6 +16,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
   const [person, setPerson] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const formRef = useRef(null);
 
   const isEditing = !!editingEvent;
@@ -63,6 +64,8 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
         setDescription('');
         setScheduledAt('');
         setPerson('');
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
       }
     } catch {
       setError('No se pudo guardar el evento. Intentá de nuevo.');
@@ -132,6 +135,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
       </div>
 
       {error && <p className="form-error">{error}</p>}
+      {success && <p className="form-success">¡Evento agregado!</p>}
 
       <div className="form-actions">
         <button type="submit" className="btn-primary" disabled={loading}>

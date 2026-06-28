@@ -10,34 +10,31 @@ function toDatetimeLocal(isoString) {
 }
 
 export default function EventForm({ onEventCreated, onEventUpdated, onEventRescheduled, editingEvent, mode = 'edit', onCancelEdit }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [person, setPerson] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const formRef = useRef(null);
-
   const isEditing = !!editingEvent;
   const isRescheduling = isEditing && mode === 'reschedule';
 
+  // Estado inicial derivado de props; al cambiar de evento/modo, App remonta
+  // este componente vía `key`, por lo que los valores se recalculan.
+  // Al reprogramar se exige una fecha nueva, no se reutiliza la anterior.
+  const [title, setTitle] = useState(editingEvent?.title ?? '');
+  const [description, setDescription] = useState(editingEvent?.description ?? '');
+  const [scheduledAt, setScheduledAt] = useState(
+    editingEvent && !isRescheduling ? toDatetimeLocal(editingEvent.scheduled_at) : ''
+  );
+  const [person, setPerson] = useState(editingEvent?.person ?? '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [minDateTime] = useState(() =>
+    toDatetimeLocal(new Date(Date.now() + 60000).toISOString())
+  );
+  const formRef = useRef(null);
+
   useEffect(() => {
     if (editingEvent) {
-      setTitle(editingEvent.title);
-      setDescription(editingEvent.description || '');
-      // Al reprogramar se exige una fecha nueva, no se reutiliza la anterior
-      setScheduledAt(mode === 'reschedule' ? '' : toDatetimeLocal(editingEvent.scheduled_at));
-      setPerson(editingEvent.person || '');
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      setTitle('');
-      setDescription('');
-      setScheduledAt('');
-      setPerson('');
     }
-    setError('');
-  }, [editingEvent, mode]);
+  }, [editingEvent]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -119,7 +116,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
           type="datetime-local"
           value={scheduledAt}
           onChange={(e) => setScheduledAt(e.target.value)}
-          min={toDatetimeLocal(new Date(Date.now() + 60000).toISOString())}
+          min={minDateTime}
           required
         />
       </div>

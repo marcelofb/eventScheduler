@@ -10,6 +10,22 @@ export default function App() {
   const [slowWarning, setSlowWarning] = useState(false);
   const [error, setError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
+  const [formMode, setFormMode] = useState('edit');
+
+  function handleEdit(event) {
+    setFormMode('edit');
+    setEditingEvent(event);
+  }
+
+  function handleReschedule(event) {
+    setFormMode('reschedule');
+    setEditingEvent(event);
+  }
+
+  function handleCancelEdit() {
+    setEditingEvent(null);
+    setFormMode('edit');
+  }
 
   useEffect(() => {
     const slowTimer = setTimeout(() => setSlowWarning(true), 4000);
@@ -44,7 +60,16 @@ export default function App() {
         .map((e) => (e.id === updated.id ? updated : e))
         .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
     );
-    setEditingEvent(null);
+    handleCancelEdit();
+  }
+
+  function handleEventRescheduled(rescheduled) {
+    setEvents((prev) =>
+      prev
+        .map((e) => (e.id === rescheduled.id ? rescheduled : e))
+        .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
+    );
+    handleCancelEdit();
   }
 
   function handleEventDeleted(id) {
@@ -84,14 +109,17 @@ export default function App() {
             <EventForm
               onEventCreated={handleEventCreated}
               onEventUpdated={handleEventUpdated}
+              onEventRescheduled={handleEventRescheduled}
               editingEvent={editingEvent}
-              onCancelEdit={() => setEditingEvent(null)}
+              mode={formMode}
+              onCancelEdit={handleCancelEdit}
             />
             <EventList
               events={events}
               loading={loading}
               onDeleted={handleEventDeleted}
-              onEdit={setEditingEvent}
+              onEdit={handleEdit}
+              onReschedule={handleReschedule}
             />
           </>
         )}

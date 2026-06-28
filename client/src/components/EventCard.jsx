@@ -11,7 +11,9 @@ function formatDate(isoString) {
   });
 }
 
-export default function EventCard({ event, onDeleted, onEdit, isPast }) {
+export default function EventCard({ event, onDeleted, onEdit, onReschedule, isPast }) {
+  const isBlocked = isPast || event.telegram_sent;
+
   async function handleDelete() {
     if (!window.confirm(`¿Eliminar "${event.title}"?`)) return;
     try {
@@ -31,7 +33,7 @@ export default function EventCard({ event, onDeleted, onEdit, isPast }) {
       <h3 className="event-title">{event.title}</h3>
       {event.person && <p className="event-person">👤 {event.person}</p>}
       {event.description && <p className="event-description">{event.description}</p>}
-      {!isPast && !event.telegram_sent && (
+      {!isBlocked ? (
         <div className="card-actions">
           <button className="btn-edit" onClick={() => onEdit(event)} aria-label="Editar evento">
             Editar
@@ -40,6 +42,18 @@ export default function EventCard({ event, onDeleted, onEdit, isPast }) {
             Eliminar
           </button>
         </div>
+      ) : (
+        onReschedule && (
+          <div className="card-actions">
+            <button
+              className="btn-reschedule"
+              onClick={() => onReschedule(event)}
+              aria-label="Reprogramar evento"
+            >
+              Reprogramar
+            </button>
+          </div>
+        )
       )}
     </div>
   );

@@ -3,7 +3,7 @@ import EventCard from './EventCard';
 
 const PERSON_OPTIONS = ['Todos', 'Bicha', 'Bicho', 'Bicha y Bicho'];
 
-export default function EventList({ events, loading, onDeleted, onEdit }) {
+export default function EventList({ events, loading, onDeleted, onEdit, onReschedule }) {
   const [personFilter, setPersonFilter] = useState('Todos');
   const [showPast, setShowPast] = useState(false);
 
@@ -45,7 +45,7 @@ export default function EventList({ events, loading, onDeleted, onEdit }) {
         </div>
         {filteredUpcoming.length > 0 ? (
           filteredUpcoming.map((e) => (
-            <EventCard key={e.id} event={e} onDeleted={onDeleted} onEdit={onEdit} isPast={false} />
+            <EventCard key={e.id} event={e} onDeleted={onDeleted} onEdit={onEdit} onReschedule={onReschedule} isPast={false} />
           ))
         ) : upcoming.length > 0 ? (
           <p className="filter-empty">No hay próximos para {personFilter}.</p>
@@ -66,7 +66,7 @@ export default function EventList({ events, loading, onDeleted, onEdit }) {
             <>
               <h3 className="list-section-title past" style={{ marginTop: '12px' }}>Anteriores</h3>
               {past.map((e) => (
-                <EventCard key={e.id} event={e} onDeleted={onDeleted} onEdit={null} isPast={true} />
+                <EventCard key={e.id} event={e} onDeleted={onDeleted} onEdit={null} onReschedule={onReschedule} isPast={true} />
               ))}
             </>
           )}

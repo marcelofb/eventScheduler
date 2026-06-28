@@ -107,6 +107,7 @@ export default function App() {
         ) : (
           <>
             <EventForm
+              key={editingEvent ? `${editingEvent.id}-${formMode}` : 'new'}
               onEventCreated={handleEventCreated}
               onEventUpdated={handleEventUpdated}
               onEventRescheduled={handleEventRescheduled}

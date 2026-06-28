@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { createEvent, updateEvent } from '../api';
+import { createEvent, updateEvent, rescheduleEvent } from '../api';
 
 const PERSONS = ['Bicha', 'Bicho', 'Bicha y Bicho'];
 
@@ -9,7 +9,7 @@ function toDatetimeLocal(isoString) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function EventForm({ onEventCreated, onEventUpdated, editingEvent, onCancelEdit }) {
+export default function EventForm({ onEventCreated, onEventUpdated, onEventRescheduled, editingEvent, mode = 'edit', onCancelEdit }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -20,12 +20,14 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
   const formRef = useRef(null);
 
   const isEditing = !!editingEvent;
+  const isRescheduling = isEditing && mode === 'reschedule';
 
   useEffect(() => {
     if (editingEvent) {
       setTitle(editingEvent.title);
       setDescription(editingEvent.description || '');
-      setScheduledAt(toDatetimeLocal(editingEvent.scheduled_at));
+      // Al reprogramar se exige una fecha nueva, no se reutiliza la anterior
+      setScheduledAt(mode === 'reschedule' ? '' : toDatetimeLocal(editingEvent.scheduled_at));
       setPerson(editingEvent.person || '');
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
@@ -35,7 +37,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
       setPerson('');
     }
     setError('');
-  }, [editingEvent]);
+  }, [editingEvent, mode]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -54,7 +56,10 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
       person,
     };
     try {
-      if (isEditing) {
+      if (isRescheduling) {
+        const rescheduled = await rescheduleEvent(editingEvent.id, payload);
+        onEventRescheduled(rescheduled);
+      } else if (isEditing) {
         const updated = await updateEvent(editingEvent.id, payload);
         onEventUpdated(updated);
       } else {
@@ -80,7 +85,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
 
   return (
     <form className="event-form" onSubmit={handleSubmit} ref={formRef}>
-      <h2>{isEditing ? 'Editar evento' : 'Nuevo evento'}</h2>
+      <h2>{isRescheduling ? 'Reprogramar evento' : isEditing ? 'Editar evento' : 'Nuevo evento'}</h2>
 
       <div className="field">
         <label htmlFor="title">Título *</label>
@@ -139,7 +144,7 @@ export default function EventForm({ onEventCreated, onEventUpdated, editingEvent
 
       <div className="form-actions">
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Agregar evento'}
+          {loading ? 'Guardando...' : isRescheduling ? 'Reprogramar' : isEditing ? 'Guardar cambios' : 'Agregar evento'}
         </button>
         {isEditing && (
           <button type="button" className="btn-cancel" onClick={handleCancel}>

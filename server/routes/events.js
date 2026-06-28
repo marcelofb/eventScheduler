@@ -63,6 +63,36 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// PUT /api/events/:id/reschedule — reprogramar evento bloqueado (pasado o ya notificado)
+router.put('/:id/reschedule', async (req, res) => {
+  const { id } = req.params;
+  const { title, description, scheduled_at, person } = req.body;
+
+  if (!Number.isInteger(Number(id))) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+  if (!title || !scheduled_at || !person) {
+    return res.status(400).json({ error: 'title, scheduled_at y person son requeridos' });
+  }
+  if (new Date(scheduled_at) <= new Date()) {
+    return res.status(400).json({ error: 'La nueva fecha debe ser posterior al momento actual' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE events SET title=$1, description=$2, scheduled_at=$3, person=$4, telegram_sent=false WHERE id=$5 RETURNING *',
+      [title, description || null, scheduled_at, person || null, id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Evento no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al reprogramar evento' });
+  }
+});
+
 // DELETE /api/events/:id — eliminar evento
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;

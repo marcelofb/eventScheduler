@@ -10,6 +10,8 @@
   --indigo-light: #eef2ff;
   --red: #ef4444;
   --red-light: #fef2f2;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
   --gray-300: #d1d5db;
@@ -232,6 +234,23 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.btn-reschedule {
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--amber);
+  border: 1.5px solid var(--amber);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-reschedule:active {
+  background: var(--amber-light);
 }
 
 .card-actions {

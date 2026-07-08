@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { pool } = require('../db/database');
+const { createReminderJob, deleteReminderJob } = require('../lib/cronJobsApi');
 
 const router = Router();
 
@@ -29,7 +30,17 @@ router.post('/', async (req, res) => {
       'INSERT INTO events (title, description, scheduled_at, person) VALUES ($1, $2, $3, $4) RETURNING *',
       [title, description || null, scheduled_at, person || null]
     );
-    res.status(201).json(result.rows[0]);
+    const event = result.rows[0];
+    try {
+      const cronJobId = await createReminderJob(event);
+      if (cronJobId) {
+        await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId, event.id]);
+        event.cron_job_id = cronJobId;
+      }
+    } catch (cronErr) {
+      console.error('Error al crear cron job de recordatorio:', cronErr.message);
+    }
+    res.status(201).json(event);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al crear evento' });
@@ -49,6 +60,10 @@ router.put('/:id', async (req, res) => {
   }
 
   try {
+    // Obtener cron_job_id actual antes de modificar
+    const current = await pool.query('SELECT cron_job_id FROM events WHERE id=$1', [id]);
+    const oldCronJobId = current.rows[0]?.cron_job_id;
+
     const result = await pool.query(
       'UPDATE events SET title=$1, description=$2, scheduled_at=$3, person=$4 WHERE id=$5 AND telegram_sent=false RETURNING *',
       [title, description || null, scheduled_at, person || null, id]
@@ -56,7 +71,16 @@ router.put('/:id', async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
-    res.json(result.rows[0]);
+    const event = result.rows[0];
+    try {
+      await deleteReminderJob(oldCronJobId);
+      const cronJobId = await createReminderJob(event);
+      await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
+      event.cron_job_id = cronJobId;
+    } catch (cronErr) {
+      console.error('Error al actualizar cron job de recordatorio:', cronErr.message);
+    }
+    res.json(event);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al editar evento' });
@@ -79,6 +103,10 @@ router.put('/:id/reschedule', async (req, res) => {
   }
 
   try {
+    // Obtener cron_job_id actual antes de reprogramar
+    const current = await pool.query('SELECT cron_job_id FROM events WHERE id=$1', [id]);
+    const oldCronJobId = current.rows[0]?.cron_job_id;
+
     const result = await pool.query(
       'UPDATE events SET title=$1, description=$2, scheduled_at=$3, person=$4, telegram_sent=false WHERE id=$5 RETURNING *',
       [title, description || null, scheduled_at, person || null, id]
@@ -86,7 +114,16 @@ router.put('/:id/reschedule', async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
-    res.json(result.rows[0]);
+    const event = result.rows[0];
+    try {
+      await deleteReminderJob(oldCronJobId);
+      const cronJobId = await createReminderJob(event);
+      await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
+      event.cron_job_id = cronJobId;
+    } catch (cronErr) {
+      console.error('Error al actualizar cron job de recordatorio:', cronErr.message);
+    }
+    res.json(event);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al reprogramar evento' });
@@ -108,6 +145,12 @@ router.delete('/:id', async (req, res) => {
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Evento no encontrado' });
+    }
+    // Eliminar cron job de recordatorio si existe
+    try {
+      await deleteReminderJob(result.rows[0].cron_job_id);
+    } catch (cronErr) {
+      console.error('Error al eliminar cron job de recordatorio:', cronErr.message);
     }
     res.json({ message: 'Evento eliminado' });
   } catch (err) {

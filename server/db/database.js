@@ -20,6 +20,10 @@ async function initDB() {
   await pool.query(`
     ALTER TABLE events ADD COLUMN IF NOT EXISTS person TEXT
   `);
+  // Migración: agregar columna cron_job_id para recordatorios de 15 min
+  await pool.query(`
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS cron_job_id TEXT
+  `);
   console.log('DB lista');
 }
 

@@ -100,4 +100,14 @@ async function deleteReminderJob(cronJobId) {
   );
 }
 
-module.exports = { createReminderJob, deleteReminderJob };
+/**
+ * Reemplaza un cron job existente por uno nuevo.
+ * Incluye un delay entre el DELETE y el PUT para evitar rate limiting (HTTP 429).
+ */
+async function replaceReminderJob(oldCronJobId, event) {
+  await deleteReminderJob(oldCronJobId);
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  return createReminderJob(event);
+}
+
+module.exports = { createReminderJob, deleteReminderJob, replaceReminderJob };

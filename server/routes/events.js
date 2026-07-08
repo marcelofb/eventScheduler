@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { pool } = require('../db/database');
-const { createReminderJob, deleteReminderJob } = require('../lib/cronJobsApi');
+const { createReminderJob, deleteReminderJob, replaceReminderJob } = require('../lib/cronJobsApi');
 
 const router = Router();
 
@@ -73,8 +73,7 @@ router.put('/:id', async (req, res) => {
     }
     const event = result.rows[0];
     try {
-      await deleteReminderJob(oldCronJobId);
-      const cronJobId = await createReminderJob(event);
+      const cronJobId = await replaceReminderJob(oldCronJobId, event);
       await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
       event.cron_job_id = cronJobId;
     } catch (cronErr) {
@@ -116,8 +115,7 @@ router.put('/:id/reschedule', async (req, res) => {
     }
     const event = result.rows[0];
     try {
-      await deleteReminderJob(oldCronJobId);
-      const cronJobId = await createReminderJob(event);
+      const cronJobId = await replaceReminderJob(oldCronJobId, event);
       await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
       event.cron_job_id = cronJobId;
     } catch (cronErr) {

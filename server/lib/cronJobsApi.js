@@ -68,6 +68,7 @@ async function createReminderJob(event) {
 
   const jobIds = [];
   for (const chatId of chatIds) {
+    if (jobIds.length > 0) await new Promise((r) => setTimeout(r, 1200)); // límite: 1 req/seg
     const response = await axios.put(
       `${CRON_JOB_ORG_API}/jobs`,
       { job: buildJobPayload(event, chatId) },

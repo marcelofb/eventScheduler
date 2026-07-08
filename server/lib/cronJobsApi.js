@@ -2,6 +2,52 @@ const axios = require('axios');
 
 const CRON_JOB_ORG_API = 'https://api.cron-job.org';
 
+// Construye el payload del job a partir de los datos del evento y un chat ID
+function buildJobPayload(event, chatId) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const reminderTime = new Date(new Date(event.scheduled_at).getTime() - 15 * 60 * 1000);
+  const eventTime = new Date(event.scheduled_at).toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  });
+  const person = event.person ? ` (${event.person})` : '';
+  const desc = event.description ? `\n${event.description}` : '';
+  const text = `⏰ <b>En ~15 min</b>: ${event.title}${person} a las <b>${eventTime}</b>${desc}`;
+
+  // expiresAt: formato YYYYMMDDhhmmss en UTC (no Unix timestamp)
+  const expiry = new Date(reminderTime.getTime() + 5 * 60 * 1000);
+  const expiresAt = parseInt(
+    `${expiry.getUTCFullYear()}` +
+    String(expiry.getUTCMonth() + 1).padStart(2, '0') +
+    String(expiry.getUTCDate()).padStart(2, '0') +
+    String(expiry.getUTCHours()).padStart(2, '0') +
+    String(expiry.getUTCMinutes()).padStart(2, '0') +
+    String(expiry.getUTCSeconds()).padStart(2, '0')
+  );
+
+  return {
+    url: `https://api.telegram.org/bot${token}/sendMessage`,
+    enabled: true,
+    title: `Reminder: ${event.title}`,
+    requestMethod: 1,
+    // body y headers van dentro de extendedData según la API de cron-job.org
+    extendedData: {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    },
+    schedule: {
+      timezone: 'UTC',
+      expiresAt,
+      hours: [reminderTime.getUTCHours()],
+      mdays: [reminderTime.getUTCDate()],
+      minutes: [reminderTime.getUTCMinutes()],
+      months: [reminderTime.getUTCMonth() + 1],
+      wdays: [-1],
+    },
+  };
+}
+
 /**
  * Crea un cron job de una sola vez en cron-job.org que llama directamente
  * a la API de Telegram ~15 minutos antes del evento.
@@ -17,57 +63,15 @@ async function createReminderJob(event) {
 
   if (!apiKey || !token || chatIds.length === 0) return null;
 
-  // Tiempo del recordatorio: 15 min antes del evento
   const reminderTime = new Date(new Date(event.scheduled_at).getTime() - 15 * 60 * 1000);
-
-  // Si ya pasó el momento del recordatorio, no crear job
   if (reminderTime <= new Date()) return null;
-
-  // Hora de visualización del evento en zona Argentina
-  const eventTime = new Date(event.scheduled_at).toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Argentina/Buenos_Aires',
-  });
-  const person = event.person ? ` (${event.person})` : '';
-  const desc = event.description ? `\n${event.description}` : '';
-  const text = `⏰ <b>En ~15 min</b>: ${event.title}${person} a las <b>${eventTime}</b>${desc}`;
-
-  const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
-
-  // Campos de schedule en UTC
-  const hours = reminderTime.getUTCHours();
-  const minutes = reminderTime.getUTCMinutes();
-  const mdays = reminderTime.getUTCDate();
-  const months = reminderTime.getUTCMonth() + 1;
-
-  // El job expira 5 minutos después del disparo → efectivamente se ejecuta una sola vez
-  const expiresAt = Math.floor(reminderTime.getTime() / 1000) + 5 * 60;
 
   const jobIds = [];
   for (const chatId of chatIds) {
     const response = await axios.put(
       `${CRON_JOB_ORG_API}/jobs`,
-      {
-        job: {
-          url: telegramUrl,
-          enabled: true,
-          title: `Reminder: ${event.title}`,
-          requestMethod: 1, // POST
-          body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
-          headers: [{ name: 'Content-Type', value: 'application/json' }],
-          schedule: {
-            timezone: 'UTC',
-            expiresAt,
-            hours: [hours],
-            mdays: [mdays],
-            minutes: [minutes],
-            months: [months],
-            wdays: [-1],
-          },
-        },
-      },
-      { headers: { Authorization: `Bearer ${apiKey}` } }
+      { job: buildJobPayload(event, chatId) },
+      { headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' } }
     );
     jobIds.push(String(response.data.jobId));
   }
@@ -101,12 +105,39 @@ async function deleteReminderJob(cronJobId) {
 }
 
 /**
- * Reemplaza un cron job existente por uno nuevo.
- * Incluye un delay entre el DELETE y el PUT para evitar rate limiting (HTTP 429).
+ * Actualiza los cron jobs existentes usando PATCH (1 llamada por job) en lugar de
+ * DELETE + PUT (2 llamadas), evitando el rate limiting HTTP 429 de cron-job.org.
+ * Fallback a delete+recrear si los IDs no coinciden en cantidad o el reminder es pasado.
  */
 async function replaceReminderJob(oldCronJobId, event) {
+  const apiKey = process.env.CRON_JOB_ORG_API_KEY;
+  const chatIds = (process.env.TELEGRAM_CHAT_ID || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (!oldCronJobId) return createReminderJob(event);
+
+  const oldIds = String(oldCronJobId).split(',').map((id) => id.trim()).filter(Boolean);
+  const reminderTime = new Date(new Date(event.scheduled_at).getTime() - 15 * 60 * 1000);
+
+  // PATCH in-place: 1 sola llamada API por job cuando la cantidad de IDs coincide
+  if (apiKey && oldIds.length === chatIds.length && reminderTime > new Date()) {
+    for (let i = 0; i < oldIds.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 700));
+      await axios.patch(
+        `${CRON_JOB_ORG_API}/jobs/${oldIds[i]}`,
+        { job: buildJobPayload(event, chatIds[i]) },
+        { headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' } }
+      );
+    }
+    return oldCronJobId; // mismos IDs, payload actualizado
+  }
+
+  // Fallback: eliminar y recrear con delay
   await deleteReminderJob(oldCronJobId);
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  if (reminderTime <= new Date()) return null;
+  await new Promise((r) => setTimeout(r, 1500));
   return createReminderJob(event);
 }
 

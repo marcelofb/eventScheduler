@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
         event.cron_job_id = cronJobId;
       }
     } catch (cronErr) {
-      console.error('Error al crear cron job de recordatorio:', cronErr.message);
+      console.error('Error al crear cron job de recordatorio:', cronErr.message, cronErr.response?.data);
     }
     res.status(201).json(event);
   } catch (err) {
@@ -77,7 +77,7 @@ router.put('/:id', async (req, res) => {
       await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
       event.cron_job_id = cronJobId;
     } catch (cronErr) {
-      console.error('Error al actualizar cron job de recordatorio:', cronErr.message);
+      console.error('Error al actualizar cron job de recordatorio:', cronErr.message, cronErr.response?.data);
     }
     res.json(event);
   } catch (err) {
@@ -119,7 +119,7 @@ router.put('/:id/reschedule', async (req, res) => {
       await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
       event.cron_job_id = cronJobId;
     } catch (cronErr) {
-      console.error('Error al actualizar cron job de recordatorio:', cronErr.message);
+      console.error('Error al actualizar cron job de recordatorio:', cronErr.message, cronErr.response?.data);
     }
     res.json(event);
   } catch (err) {

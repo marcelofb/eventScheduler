@@ -4,12 +4,42 @@ const { createReminderJob, deleteReminderJob, replaceReminderJob } = require('..
 
 const router = Router();
 
+function isValidDateOnly(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 // GET /api/events — todos los eventos ordenados por fecha
 router.get('/', async (req, res) => {
+  const { from, to } = req.query;
+
+  if ((from && !to) || (!from && to)) {
+    return res.status(400).json({ error: 'Debés enviar from y to juntos' });
+  }
+
+  if (from && to) {
+    if (!isValidDateOnly(from) || !isValidDateOnly(to)) {
+      return res.status(400).json({ error: 'from y to deben tener formato YYYY-MM-DD' });
+    }
+    if (from > to) {
+      return res.status(400).json({ error: 'from no puede ser mayor que to' });
+    }
+  }
+
   try {
-    const result = await pool.query(
-      'SELECT * FROM events ORDER BY scheduled_at ASC'
-    );
+    let result;
+
+    if (from && to) {
+      result = await pool.query(
+        `SELECT * FROM events
+         WHERE (scheduled_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
+           BETWEEN $1::date AND $2::date
+         ORDER BY scheduled_at ASC`,
+        [from, to]
+      );
+    } else {
+      result = await pool.query('SELECT * FROM events ORDER BY scheduled_at ASC');
+    }
+
     res.json(result.rows);
   } catch (err) {
     console.error(err);

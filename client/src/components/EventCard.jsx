@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { deleteEvent } from '../api';
 
 function formatDate(isoString) {
@@ -11,16 +12,23 @@ function formatDate(isoString) {
   });
 }
 
-export default function EventCard({ event, onDeleted, onEdit, onReschedule, isPast }) {
+export default function EventCard({ event, onDeleted, onDeleteError, onEdit, onReschedule, isPast }) {
   const isBlocked = isPast || event.telegram_sent;
+  const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
+    if (deleting) return;
     if (!window.confirm(`¿Eliminar "${event.title}"?`)) return;
+
+    setDeleting(true);
+
     try {
       await deleteEvent(event.id);
-      onDeleted(event.id);
+      onDeleted(event.id, event.title);
     } catch {
-      alert('No se pudo eliminar el evento.');
+      if (onDeleteError) onDeleteError();
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -38,8 +46,8 @@ export default function EventCard({ event, onDeleted, onEdit, onReschedule, isPa
           <button className="btn-edit" onClick={() => onEdit(event)} aria-label="Editar evento">
             Editar
           </button>
-          <button className="btn-delete" onClick={handleDelete} aria-label="Eliminar evento">
-            Eliminar
+          <button className="btn-delete" onClick={handleDelete} aria-label="Eliminar evento" disabled={deleting}>
+            {deleting ? 'Eliminando...' : 'Eliminar'}
           </button>
         </div>
       ) : (

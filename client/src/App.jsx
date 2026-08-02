@@ -11,6 +11,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
   const [formMode, setFormMode] = useState('edit');
+  const [deleteFeedback, setDeleteFeedback] = useState(null);
 
   function handleEdit(event) {
     setFormMode('edit');
@@ -46,6 +47,16 @@ export default function App() {
     return () => clearTimeout(slowTimer);
   }, []);
 
+  useEffect(() => {
+    if (!deleteFeedback) return undefined;
+
+    const feedbackTimer = setTimeout(() => {
+      setDeleteFeedback(null);
+    }, 3000);
+
+    return () => clearTimeout(feedbackTimer);
+  }, [deleteFeedback]);
+
   function handleEventCreated(newEvent) {
     setEvents((prev) =>
       [...prev, newEvent].sort(
@@ -72,8 +83,19 @@ export default function App() {
     handleCancelEdit();
   }
 
-  function handleEventDeleted(id) {
+  function handleEventDeleted(id, title) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
+    setDeleteFeedback({
+      type: 'success',
+      message: `Evento "${title}" eliminado.`,
+    });
+  }
+
+  function handleDeleteError() {
+    setDeleteFeedback({
+      type: 'error',
+      message: 'No se pudo eliminar el evento. Intentá de nuevo.',
+    });
   }
 
   return (
@@ -119,8 +141,11 @@ export default function App() {
               events={events}
               loading={loading}
               onDeleted={handleEventDeleted}
+              onDeleteError={handleDeleteError}
               onEdit={handleEdit}
               onReschedule={handleReschedule}
+              deleteFeedback={deleteFeedback}
+              onDismissFeedback={() => setDeleteFeedback(null)}
             />
           </>
         )}

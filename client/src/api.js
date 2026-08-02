@@ -1,7 +1,15 @@
 const API_URL = import.meta.env.VITE_API_URL ?? '';
 
-export async function getEvents() {
-  const res = await fetch(`${API_URL}/api/events`);
+export async function getEvents(options = {}) {
+  const params = new URLSearchParams();
+
+  if (options.from) params.set('from', options.from);
+  if (options.to) params.set('to', options.to);
+
+  const query = params.toString();
+  const url = `${API_URL}/api/events${query ? `?${query}` : ''}`;
+
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Error al obtener eventos');
   return res.json();
 }

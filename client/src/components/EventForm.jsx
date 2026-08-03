@@ -24,7 +24,6 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
   const [person, setPerson] = useState(editingEvent?.person ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [minDateTime] = useState(() =>
     toDatetimeLocal(new Date(Date.now() + 60000).toISOString())
   );
@@ -66,8 +65,6 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
         setDescription('');
         setScheduledAt('');
         setPerson('');
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
       }
     } catch {
       setError('No se pudo guardar el evento. Intentá de nuevo.');
@@ -137,7 +134,6 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
       </div>
 
       {error && <p className="form-error">{error}</p>}
-      {success && <p className="form-success">¡Evento agregado!</p>}
 
       <div className="form-actions">
         <button type="submit" className="btn-primary" disabled={loading}>

@@ -11,7 +11,11 @@ export default function App() {
   const [error, setError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
   const [formMode, setFormMode] = useState('edit');
-  const [deleteFeedback, setDeleteFeedback] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  function showToast(message, type = 'success') {
+    setToast({ message, type });
+  }
 
   function handleEdit(event) {
     setFormMode('edit');
@@ -48,14 +52,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!deleteFeedback) return undefined;
+    if (!toast) return undefined;
 
     const feedbackTimer = setTimeout(() => {
-      setDeleteFeedback(null);
+      setToast(null);
     }, 3000);
 
     return () => clearTimeout(feedbackTimer);
-  }, [deleteFeedback]);
+  }, [toast]);
 
   function handleEventCreated(newEvent) {
     setEvents((prev) =>
@@ -63,6 +67,7 @@ export default function App() {
         (a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)
       )
     );
+    showToast('¡Evento agregado!', 'success');
   }
 
   function handleEventUpdated(updated) {
@@ -85,17 +90,11 @@ export default function App() {
 
   function handleEventDeleted(id, title) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
-    setDeleteFeedback({
-      type: 'success',
-      message: `Evento "${title}" eliminado.`,
-    });
+    showToast(`Evento "${title}" eliminado.`, 'success');
   }
 
   function handleDeleteError() {
-    setDeleteFeedback({
-      type: 'error',
-      message: 'No se pudo eliminar el evento. Intentá de nuevo.',
-    });
+    showToast('No se pudo eliminar el evento. Intentá de nuevo.', 'error');
   }
 
   return (
@@ -144,12 +143,26 @@ export default function App() {
               onDeleteError={handleDeleteError}
               onEdit={handleEdit}
               onReschedule={handleReschedule}
-              deleteFeedback={deleteFeedback}
-              onDismissFeedback={() => setDeleteFeedback(null)}
             />
           </>
         )}
       </main>
+
+      {toast && (
+        <div className="toast-container" role="status" aria-live="polite">
+          <div className={`toast ${toast.type}`}>
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() => setToast(null)}
+              aria-label="Cerrar notificación"
+            >
+              x
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -20,8 +20,6 @@ export default function EventList({
   onDeleteError,
   onEdit,
   onReschedule,
-  deleteFeedback,
-  onDismissFeedback,
 }) {
   const [personFilter, setPersonFilter] = useState('Todos');
   const [showRangeSearch, setShowRangeSearch] = useState(false);
@@ -98,15 +96,6 @@ export default function EventList({
 
   return (
     <div className="event-list">
-      {deleteFeedback && (
-        <div className={`list-feedback ${deleteFeedback.type === 'error' ? 'error' : 'success'}`}>
-          <span>{deleteFeedback.message}</span>
-          <button type="button" className="list-feedback-close" onClick={onDismissFeedback} aria-label="Cerrar mensaje">
-            Cerrar
-          </button>
-        </div>
-      )}
-
       <section>
         <h3 className="list-section-title">Próximos</h3>
         <div className="filter-chips">

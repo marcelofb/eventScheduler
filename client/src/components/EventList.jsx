@@ -43,8 +43,9 @@ export default function EventList({
   }
 
   const now = new Date();
-  const upcoming = events.filter((e) => new Date(e.scheduled_at) >= now);
-  const past = events.filter((e) => new Date(e.scheduled_at) < now);
+  const todayKey = toDateKeyInBuenosAires(now);
+  const upcoming = events.filter((e) => toDateKeyInBuenosAires(e.scheduled_at) >= todayKey);
+  const past = events.filter((e) => toDateKeyInBuenosAires(e.scheduled_at) < todayKey);
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -198,9 +199,9 @@ export default function EventList({
                       event={e}
                       onDeleted={onDeleted}
                       onDeleteError={onDeleteError}
-                      onEdit={new Date(e.scheduled_at) >= now ? onEdit : null}
+                      onEdit={toDateKeyInBuenosAires(e.scheduled_at) >= todayKey ? onEdit : null}
                       onReschedule={onReschedule}
-                      isPast={new Date(e.scheduled_at) < now}
+                      isPast={toDateKeyInBuenosAires(e.scheduled_at) < todayKey}
                     />
                   ))
                 ) : (

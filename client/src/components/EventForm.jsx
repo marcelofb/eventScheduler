@@ -22,6 +22,9 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
     editingEvent && !isRescheduling ? toDatetimeLocal(editingEvent.scheduled_at) : ''
   );
   const [person, setPerson] = useState(editingEvent?.person ?? '');
+  const [isRecurring, setIsRecurring] = useState(!!editingEvent?.series_id);
+  const [endDate, setEndDate] = useState(editingEvent?.series_end_date ?? '');
+  const [editScope, setEditScope] = useState('single');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [minDateTime] = useState(() =>
@@ -50,13 +53,14 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
       description,
       scheduled_at: new Date(scheduledAt).toISOString(),
       person,
+      ...(isRecurring ? { recurrence: { end_date: endDate || null } } : {}),
     };
     try {
       if (isRescheduling) {
         const rescheduled = await rescheduleEvent(editingEvent.id, payload);
         onEventRescheduled(rescheduled);
       } else if (isEditing) {
-        const updated = await updateEvent(editingEvent.id, payload);
+        const updated = await updateEvent(editingEvent.id, payload, editScope);
         onEventUpdated(updated);
       } else {
         const created = await createEvent(payload);
@@ -93,6 +97,42 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
           maxLength={100}
         />
       </div>
+
+      {!isEditing && (
+        <div className="field">
+          <label>
+            <input
+              type="checkbox"
+              checked={isRecurring}
+              onChange={(e) => setIsRecurring(e.target.checked)}
+            />{' '}
+            Se repite todos los meses
+          </label>
+        </div>
+      )}
+
+      {isRecurring && !isRescheduling && (
+        <div className="field">
+          <label htmlFor="end_date">Termina el (opcional)</label>
+          <input
+            id="end_date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      )}
+
+      {isEditing && editingEvent.series_id && !isRescheduling && (
+        <div className="field">
+          <label htmlFor="edit_scope">Aplicar cambios a</label>
+          <select id="edit_scope" value={editScope} onChange={(e) => setEditScope(e.target.value)}>
+            <option value="single">Solo este evento</option>
+            <option value="following">Este y los siguientes</option>
+            <option value="all">Toda la serie</option>
+          </select>
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor="description">Descripción</label>

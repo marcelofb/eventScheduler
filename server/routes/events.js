@@ -1,6 +1,12 @@
 const { Router } = require('express');
 const { pool } = require('../db/database');
 const { createReminderJob, deleteReminderJob, replaceReminderJob } = require('../lib/cronJobsApi');
+const {
+  createRemindersForRows,
+  getHorizonDate,
+  materializeOccurrences,
+} = require('../lib/occurrences');
+const { addMonthClamped } = require('../lib/recurrence');
 
 const router = Router();
 
@@ -30,14 +36,21 @@ router.get('/', async (req, res) => {
 
     if (from && to) {
       result = await pool.query(
-        `SELECT * FROM events
-         WHERE (scheduled_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
+        `SELECT e.*, s.end_date AS series_end_date, s.active AS series_active
+         FROM events e
+         LEFT JOIN event_series s ON s.id = e.series_id
+         WHERE (e.scheduled_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
            BETWEEN $1::date AND $2::date
-         ORDER BY scheduled_at ASC`,
+         ORDER BY e.scheduled_at ASC`,
         [from, to]
       );
     } else {
-      result = await pool.query('SELECT * FROM events ORDER BY scheduled_at ASC');
+      result = await pool.query(
+        `SELECT e.*, s.end_date AS series_end_date, s.active AS series_active
+         FROM events e
+         LEFT JOIN event_series s ON s.id = e.series_id
+         ORDER BY e.scheduled_at ASC`
+      );
     }
 
     res.json(result.rows);
@@ -49,13 +62,35 @@ router.get('/', async (req, res) => {
 
 // POST /api/events — crear evento
 router.post('/', async (req, res) => {
-  const { title, description, scheduled_at, person } = req.body;
+  const { title, description, scheduled_at, person, recurrence } = req.body;
 
   if (!title || !scheduled_at || !person) {
     return res.status(400).json({ error: 'title, scheduled_at y person son requeridos' });
   }
 
   try {
+    if (recurrence) {
+      if (recurrence.end_date && !/^\d{4}-\d{2}-\d{2}$/.test(recurrence.end_date)) {
+        return res.status(400).json({ error: 'end_date debe tener formato YYYY-MM-DD' });
+      }
+      if (recurrence.end_date && recurrence.end_date < scheduled_at.slice(0, 10)) {
+        return res.status(400).json({ error: 'end_date no puede ser anterior al evento' });
+      }
+
+      const seriesResult = await pool.query(
+        `INSERT INTO event_series
+          (title, description, person, first_scheduled_at, end_date)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [title, description || null, person, scheduled_at, recurrence.end_date || null]
+      );
+      const series = seriesResult.rows[0];
+      const occurrences = await materializeOccurrences(series);
+      await createRemindersForRows(occurrences);
+      const first = occurrences[0];
+      return res.status(201).json(first);
+    }
+
     const result = await pool.query(
       'INSERT INTO events (title, description, scheduled_at, person) VALUES ($1, $2, $3, $4) RETURNING *',
       [title, description || null, scheduled_at, person || null]
@@ -80,7 +115,7 @@ router.post('/', async (req, res) => {
 // PUT /api/events/:id — editar evento
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, description, scheduled_at, person } = req.body;
+  const { title, description, scheduled_at, person, recurrence, scope = 'single' } = req.body;
 
   if (!Number.isInteger(Number(id))) {
     return res.status(400).json({ error: 'ID inválido' });
@@ -102,6 +137,41 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
     const event = result.rows[0];
+    if (scope !== 'single' && event.series_id) {
+      const seriesResult = await pool.query('SELECT * FROM event_series WHERE id=$1', [event.series_id]);
+      const series = seriesResult.rows[0];
+      const firstIndex = event.occurrence_index;
+      const futureResult = await pool.query(
+        `SELECT * FROM events
+         WHERE series_id=$1 AND occurrence_index >= $2 AND telegram_sent=false
+         ORDER BY occurrence_index ASC`,
+        [event.series_id, firstIndex]
+      );
+      await Promise.all(futureResult.rows.map((row) => deleteReminderJob(row.cron_job_id)));
+      await pool.query(
+        'DELETE FROM events WHERE series_id=$1 AND occurrence_index >= $2 AND telegram_sent=false',
+        [event.series_id, firstIndex]
+      );
+      const newFirstScheduledAt = scope === 'following'
+        ? addMonthClamped(scheduled_at, -firstIndex)
+        : addMonthClamped(scheduled_at, -firstIndex);
+      await pool.query(
+        `UPDATE event_series SET title=$1, description=$2, person=$3,
+          first_scheduled_at=$4, end_date=$5 WHERE id=$6`,
+        [
+          title,
+          description || null,
+          person,
+          newFirstScheduledAt,
+          recurrence?.end_date || series.end_date || null,
+          event.series_id,
+        ]
+      );
+      const updatedSeries = { ...series, title, description, person, first_scheduled_at: newFirstScheduledAt };
+      const regenerated = await materializeOccurrences(updatedSeries, firstIndex, getHorizonDate());
+      await createRemindersForRows(regenerated);
+      return res.json(regenerated[0] || event);
+    }
     try {
       const cronJobId = await replaceReminderJob(oldCronJobId, event);
       await pool.query('UPDATE events SET cron_job_id=$1 WHERE id=$2', [cronJobId || null, event.id]);
@@ -161,16 +231,38 @@ router.put('/:id/reschedule', async (req, res) => {
 // DELETE /api/events/:id — eliminar evento
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
+  const scope = req.query.scope || 'single';
 
   if (!Number.isInteger(Number(id))) {
     return res.status(400).json({ error: 'ID inválido' });
   }
 
   try {
-    const result = await pool.query(
-      'DELETE FROM events WHERE id = $1 RETURNING *',
-      [id]
-    );
+    const current = await pool.query('SELECT * FROM events WHERE id=$1', [id]);
+    if (current.rowCount === 0) return res.status(404).json({ error: 'Evento no encontrado' });
+    const event = current.rows[0];
+    let result;
+    if (scope === 'single' || !event.series_id) {
+      result = await pool.query('DELETE FROM events WHERE id = $1 RETURNING *', [id]);
+    } else {
+      const condition = scope === 'following' ? 'AND occurrence_index >= $2' : '';
+      const future = await pool.query(
+        `SELECT * FROM events
+         WHERE series_id=$1 AND telegram_sent=false AND scheduled_at >= CURRENT_TIMESTAMP ${condition}`,
+        scope === 'following' ? [event.series_id, event.occurrence_index] : [event.series_id]
+      );
+      await Promise.all(future.rows.map((row) => deleteReminderJob(row.cron_job_id)));
+      await pool.query(
+        `DELETE FROM events
+         WHERE series_id=$1 AND telegram_sent=false AND scheduled_at >= CURRENT_TIMESTAMP ${condition}`,
+        scope === 'following' ? [event.series_id, event.occurrence_index] : [event.series_id]
+      );
+      await pool.query(
+        'UPDATE event_series SET active=false WHERE id=$1',
+        [event.series_id]
+      );
+      return res.json({ message: 'Serie eliminada' });
+    }
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }

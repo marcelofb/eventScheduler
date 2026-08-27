@@ -88,8 +88,13 @@ export default function App() {
     handleCancelEdit();
   }
 
-  function handleEventDeleted(id, title) {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+  function handleEventDeleted(id, title, scope = 'single', seriesId) {
+    setEvents((prev) => prev.filter((e) => {
+      if (scope === 'single') return e.id !== id;
+      if (e.series_id !== seriesId) return true;
+      if (scope === 'all') return e.telegram_sent || new Date(e.scheduled_at) < new Date();
+      return e.id !== id && (e.telegram_sent || new Date(e.scheduled_at) < new Date());
+    }));
     showToast(`Evento "${title}" eliminado.`, 'success');
   }
 

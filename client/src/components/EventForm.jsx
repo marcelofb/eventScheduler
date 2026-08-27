@@ -99,14 +99,16 @@ export default function EventForm({ onEventCreated, onEventUpdated, onEventResch
       </div>
 
       {!isEditing && (
-        <div className="field">
-          <label>
+        <div className="field recurrence-field">
+          <label className="recurrence-toggle" htmlFor="recurrence">
             <input
+              id="recurrence"
+              className="recurrence-checkbox"
               type="checkbox"
               checked={isRecurring}
               onChange={(e) => setIsRecurring(e.target.checked)}
-            />{' '}
-            Se repite todos los meses
+            />
+            <span>Se repite todos los meses</span>
           </label>
         </div>
       )}

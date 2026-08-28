@@ -22,6 +22,21 @@ async function createJobWithRetry(payload, apiKey) {
   }
 }
 
+async function deleteJobWithRetry(jobId, apiKey) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await axios.delete(`${CRON_JOB_ORG_API}/jobs/${jobId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      return;
+    } catch (err) {
+      if (err.response?.status !== 429 || attempt === 3) throw err;
+      const retryAfter = Number(err.response.headers?.['retry-after']);
+      await wait((Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000) * (attempt + 1));
+    }
+  }
+}
+
 // Construye el payload del job a partir de los datos del evento y un chat ID
 function buildJobPayload(event, chatId) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -110,15 +125,14 @@ async function deleteReminderJob(cronJobId) {
     .map((id) => id.trim())
     .filter(Boolean);
 
-  await Promise.all(
-    jobIds.map((id) =>
-      axios
-        .delete(`${CRON_JOB_ORG_API}/jobs/${id}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        })
-        .catch((err) => console.error(`Error al eliminar cron job ${id}:`, err.message))
-    )
-  );
+  for (const [index, id] of jobIds.entries()) {
+    if (index > 0) await wait(1800);
+    try {
+      await deleteJobWithRetry(id, apiKey);
+    } catch (err) {
+      console.error(`Error al eliminar cron job ${id}:`, err.message);
+    }
+  }
 }
 
 /**

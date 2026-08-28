@@ -161,7 +161,9 @@ router.put('/:id', async (req, res) => {
          ORDER BY occurrence_index ASC`,
         [event.series_id, firstIndex]
       );
-      await Promise.all(futureResult.rows.map((row) => deleteReminderJob(row.cron_job_id)));
+      for (const row of futureResult.rows) {
+        await deleteReminderJob(row.cron_job_id);
+      }
       await pool.query(
         'DELETE FROM events WHERE series_id=$1 AND occurrence_index >= $2 AND telegram_sent=false',
         [event.series_id, firstIndex]
@@ -265,7 +267,9 @@ router.delete('/:id', async (req, res) => {
          WHERE series_id=$1 AND telegram_sent=false AND scheduled_at >= CURRENT_TIMESTAMP ${condition}`,
         scope === 'following' ? [event.series_id, event.occurrence_index] : [event.series_id]
       );
-      await Promise.all(future.rows.map((row) => deleteReminderJob(row.cron_job_id)));
+      for (const row of future.rows) {
+        await deleteReminderJob(row.cron_job_id);
+      }
       await pool.query(
         `DELETE FROM events
          WHERE series_id=$1 AND telegram_sent=false AND scheduled_at >= CURRENT_TIMESTAMP ${condition}`,

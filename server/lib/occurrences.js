@@ -8,12 +8,12 @@ function getHorizonDate() {
   return addMonthClamped(new Date(), MATERIALIZE_HORIZON_MONTHS);
 }
 
-async function materializeOccurrences(series, fromIndex = 0, horizonDate = getHorizonDate()) {
+async function materializeOccurrences(series, fromIndex = 0, horizonDate = getHorizonDate(), database = pool) {
   const dates = generateMonthlyOccurrenceDates(series, fromIndex, horizonDate);
   const rows = [];
 
   for (const occurrence of dates) {
-    const result = await pool.query(
+    const result = await database.query(
       `INSERT INTO events
         (title, description, scheduled_at, person, series_id, occurrence_index)
        VALUES ($1, $2, $3, $4, $5, $6)

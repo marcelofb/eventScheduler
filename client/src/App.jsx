@@ -62,8 +62,9 @@ export default function App() {
   }, [toast]);
 
   function handleEventCreated(newEvent) {
+    const createdEvents = newEvent.occurrences ?? [newEvent];
     setEvents((prev) =>
-      [...prev, newEvent].sort(
+      [...prev, ...createdEvents].sort(
         (a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)
       )
     );

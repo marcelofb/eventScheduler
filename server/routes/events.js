@@ -77,18 +77,32 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'end_date no puede ser anterior al evento' });
       }
 
-      const seriesResult = await pool.query(
-        `INSERT INTO event_series
-          (title, description, person, first_scheduled_at, end_date)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [title, description || null, person, scheduled_at, recurrence.end_date || null]
-      );
-      const series = seriesResult.rows[0];
-      const occurrences = await materializeOccurrences(series);
+      const database = await pool.connect();
+      let occurrences;
+      try {
+        await database.query('BEGIN');
+        const seriesResult = await database.query(
+          `INSERT INTO event_series
+            (title, description, person, first_scheduled_at, end_date)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING *`,
+          [title, description || null, person, scheduled_at, recurrence.end_date || null]
+        );
+        const series = seriesResult.rows[0];
+        occurrences = await materializeOccurrences(series, 0, getHorizonDate(), database);
+        if (occurrences.length === 0) {
+          throw new Error('No se pudo generar la primera ocurrencia');
+        }
+        await database.query('COMMIT');
+      } catch (transactionError) {
+        await database.query('ROLLBACK');
+        throw transactionError;
+      } finally {
+        database.release();
+      }
       await createRemindersForRows(occurrences);
       const first = occurrences[0];
-      return res.status(201).json(first);
+      return res.status(201).json({ ...first, occurrences });
     }
 
     const result = await pool.query(

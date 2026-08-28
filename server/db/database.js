@@ -47,6 +47,12 @@ async function initDB() {
       ON events (series_id, occurrence_index)
       WHERE series_id IS NOT NULL
   `);
+  await pool.query(`
+    DELETE FROM event_series s
+    WHERE NOT EXISTS (
+      SELECT 1 FROM events e WHERE e.series_id = s.id
+    )
+  `);
   console.log('DB lista');
 }
 

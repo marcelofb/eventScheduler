@@ -35,8 +35,9 @@ async function materializeOccurrences(series, fromIndex = 0, horizonDate = getHo
 }
 
 async function createRemindersForRows(rows) {
-  for (const event of rows) {
+  for (const [index, event] of rows.entries()) {
     if (event.cron_job_id) continue;
+    if (index > 0) await new Promise((resolve) => setTimeout(resolve, 1800));
     try {
       const cronJobId = await createReminderJob(event);
       if (cronJobId) {

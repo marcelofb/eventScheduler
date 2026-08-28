@@ -23,7 +23,14 @@ router.post('/', async (req, res) => {
         Number(lastResult.rows[0].last_index) + 1,
         getHorizonDate()
       );
-      await createRemindersForRows(rows);
+      const pendingResult = await pool.query(
+        `SELECT * FROM events
+         WHERE series_id=$1 AND cron_job_id IS NULL
+           AND scheduled_at <= $2
+         ORDER BY scheduled_at ASC`,
+        [series.id, getHorizonDate()]
+      );
+      await createRemindersForRows(pendingResult.rows);
       generated += rows.length;
     }
 

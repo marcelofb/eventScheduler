@@ -2,6 +2,26 @@ const axios = require('axios');
 
 const CRON_JOB_ORG_API = 'https://api.cron-job.org';
 
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function createJobWithRetry(payload, apiKey) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await axios.put(
+        `${CRON_JOB_ORG_API}/jobs`,
+        { job: payload },
+        { headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' } }
+      );
+    } catch (err) {
+      if (err.response?.status !== 429 || attempt === 3) throw err;
+      const retryAfter = Number(err.response.headers?.['retry-after']);
+      await wait((Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000) * (attempt + 1));
+    }
+  }
+}
+
 // Construye el payload del job a partir de los datos del evento y un chat ID
 function buildJobPayload(event, chatId) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -69,11 +89,7 @@ async function createReminderJob(event) {
   const jobIds = [];
   for (const chatId of chatIds) {
     if (jobIds.length > 0) await new Promise((r) => setTimeout(r, 1200)); // límite: 1 req/seg
-    const response = await axios.put(
-      `${CRON_JOB_ORG_API}/jobs`,
-      { job: buildJobPayload(event, chatId) },
-      { headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' } }
-    );
+    const response = await createJobWithRetry(buildJobPayload(event, chatId), apiKey);
     jobIds.push(String(response.data.jobId));
   }
 

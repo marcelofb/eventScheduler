@@ -17,7 +17,7 @@ async function materializeOccurrences(series, fromIndex = 0, horizonDate = getHo
       `INSERT INTO events
         (title, description, scheduled_at, person, series_id, occurrence_index)
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (series_id, occurrence_index) DO NOTHING
+      ON CONFLICT (series_id, occurrence_index) WHERE series_id IS NOT NULL DO NOTHING
        RETURNING *`,
       [
         series.title,
